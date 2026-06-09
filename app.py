@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
+import os
 import numpy as np
 import librosa
 import joblib
@@ -19,11 +20,7 @@ def extract_features(audio):
 
 @app.route('/', methods=['GET'])
 def home():
-    return jsonify({
-        "status": "running",
-        "message": "AI Scam Detector API is live!",
-        "version": "1.0"
-    })
+    return send_from_directory('.', 'index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
