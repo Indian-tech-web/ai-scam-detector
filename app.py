@@ -4,6 +4,7 @@ import numpy as np
 import librosa
 import joblib
 import io
+import tempfile
 import soundfile as sf
 
 app = Flask(__name__)
@@ -37,22 +38,16 @@ def extract_features(audio):
 def advanced_ai_checks(audio):
     score = 0
     reasons = []
-
-    # Check 1 — Too clean (no background noise)
     noise_level = np.std(audio[:1000])
     if noise_level < 0.001:
         score += 1
         reasons.append("Too clean — no background noise")
-
-    # Check 2 — No breathing pauses
     silence_threshold = 0.01
     silent_frames = np.sum(np.abs(audio) < silence_threshold)
     silence_ratio = silent_frames / len(audio)
     if silence_ratio < 0.1:
         score += 1
         reasons.append("No natural pauses detected")
-
-    # Check 3 — Too smooth pitch
     pitches, _ = librosa.piptrack(y=audio, sr=SAMPLE_RATE)
     pitch_values = pitches[pitches > 0]
     if len(pitch_values) > 0:
@@ -60,13 +55,10 @@ def advanced_ai_checks(audio):
         if pitch_smoothness < 500:
             score += 1
             reasons.append("Pitch too smooth — AI pattern")
-
-    # Check 4 — Spectral flatness
     flatness = np.mean(librosa.feature.spectral_flatness(y=audio))
     if flatness < 0.01:
         score += 1
         reasons.append("Spectral pattern matches AI voice")
-
     return score, reasons
 
 @app.route('/', methods=['GET'])
@@ -81,21 +73,14 @@ def analyze():
 
         audio_file = request.files['audio']
         audio_bytes = audio_file.read()
-        try:
-            audio, sr = sf.read(io.BytesIO(audio_bytes))
-        except Exception:
-            import tempfile, subprocess
-            with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as f:
-                f.write(audio_bytes)
-                tmp_path = f.name
-            wav_path = tmp_path.replace('.webm', '.wav')
-            subprocess.run(['ffmpeg', '-i', tmp_path, wav_path], capture_output=True)
-            audio, sr = sf.read(wav_path)
-            os.unlink(tmp_path)
-            os.unlink(wav_path)
 
-        if len(audio.shape) > 1:
-            audio = np.mean(audio, axis=1)
+        # Save to temp file and load with librosa
+        with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
+
+        audio, sr = librosa.load(tmp_path, sr=SAMPLE_RATE, mono=True)
+        os.unlink(tmp_path)
 
         audio = audio.astype(np.float32)
 
@@ -110,10 +95,8 @@ def analyze():
         probability = model.predict_proba(features)[0]
         confidence = max(probability) * 100
 
-        # Advanced AI checks
         ai_score, reasons = advanced_ai_checks(audio)
 
-        # Combined decision
         if prediction == 1 or ai_score >= 2:
             is_scam = True
             message = "⚠️ SCAM DETECTED!"
