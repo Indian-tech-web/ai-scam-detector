@@ -81,7 +81,18 @@ def analyze():
 
         audio_file = request.files['audio']
         audio_bytes = audio_file.read()
-        audio, sr = sf.read(io.BytesIO(audio_bytes))
+        try:
+            audio, sr = sf.read(io.BytesIO(audio_bytes))
+        except Exception:
+            import tempfile, subprocess
+            with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as f:
+                f.write(audio_bytes)
+                tmp_path = f.name
+            wav_path = tmp_path.replace('.webm', '.wav')
+            subprocess.run(['ffmpeg', '-i', tmp_path, wav_path], capture_output=True)
+            audio, sr = sf.read(wav_path)
+            os.unlink(tmp_path)
+            os.unlink(wav_path)
 
         if len(audio.shape) > 1:
             audio = np.mean(audio, axis=1)

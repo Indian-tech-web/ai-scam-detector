@@ -4,3 +4,4 @@ librosa
 scikit-learn
 joblib
 soundfile
+ffmpeg-python
