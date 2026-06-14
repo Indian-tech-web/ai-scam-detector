@@ -11,12 +11,40 @@ app = Flask(__name__)
 SAMPLE_RATE = 22050
 
 def extract_features(audio):
-    mfccs = librosa.feature.mfcc(
-        y=audio,
-        sr=SAMPLE_RATE,
-        n_mfcc=40
-    )
-    return np.mean(mfccs, axis=1)
+    # MFCC features
+    mfccs = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=40)
+    mfcc_mean = np.mean(mfccs, axis=1)
+    mfcc_std = np.std(mfccs, axis=1)
+    
+    # Spectral features
+    spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=audio, sr=SAMPLE_RATE))
+    spectral_rolloff = np.mean(librosa.feature.spectral_rolloff(y=audio, sr=SAMPLE_RATE))
+    spectral_bandwidth = np.mean(librosa.feature.spectral_bandwidth(y=audio, sr=SAMPLE_RATE))
+    
+    # Pitch features
+    pitches, magnitudes = librosa.piptrack(y=audio, sr=SAMPLE_RATE)
+    pitch_mean = np.mean(pitches[pitches > 0]) if np.any(pitches > 0) else 0
+    pitch_std = np.std(pitches[pitches > 0]) if np.any(pitches > 0) else 0
+    
+    # Zero crossing rate
+    zcr = np.mean(librosa.feature.zero_crossing_rate(audio))
+    
+    # Chroma features
+    chroma = librosa.feature.chroma_stft(y=audio, sr=SAMPLE_RATE)
+    chroma_mean = np.mean(chroma, axis=1)
+    
+    # RMS Energy
+    rms = np.mean(librosa.feature.rms(y=audio))
+    
+    features = np.concatenate([
+        mfcc_mean, mfcc_std,
+        [spectral_centroid, spectral_rolloff, spectral_bandwidth],
+        [pitch_mean, pitch_std],
+        [zcr],
+        chroma_mean,
+        [rms]
+    ])
+    return features
 
 @app.route('/', methods=['GET'])
 def home():
@@ -48,6 +76,8 @@ def analyze():
         
         # Load model and predict
         model = joblib.load("scam_detector_model.pkl")
+        scaler = joblib.load("scaler.pkl")
+        features = scaler.transform(features)
         prediction = model.predict(features)[0]
         probability = model.predict_proba(features)[0]
         confidence = max(probability) * 100
