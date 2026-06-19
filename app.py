@@ -84,6 +84,16 @@ def analyze():
 
         audio = audio.astype(np.float32)
 
+        # Check if audio has actual sound (not silence)
+        energy = np.sqrt(np.mean(audio**2))
+        if energy < 0.005:
+            return jsonify({
+                "error": "No voice detected — please speak clearly",
+                "is_scam": False,
+                "result": "NO_VOICE",
+                "message": "🎤 No voice detected. Please try again and speak."
+            }), 200
+
         features = extract_features(audio)
         features = features.reshape(1, -1)
 
