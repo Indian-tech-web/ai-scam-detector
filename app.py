@@ -3,12 +3,11 @@ import os
 import numpy as np
 import librosa
 import joblib
-import io
 import tempfile
-import soundfile as sf
+
+os.environ["PATH"] += os.pathsep + r"C:\Users\LOQ\Desktop\ffmpeg-8.1.1-essentials_build\bin"
 
 app = Flask(__name__)
-
 SAMPLE_RATE = 22050
 
 def extract_features(audio):
@@ -35,31 +34,10 @@ def extract_features(audio):
     ])
     return features
 
-def advanced_ai_checks(audio):
-    score = 0
-    reasons = []
-    noise_level = np.std(audio[:1000])
-    if noise_level < 0.001:
-        score += 1
-        reasons.append("Too clean — no background noise")
-    silence_threshold = 0.01
-    silent_frames = np.sum(np.abs(audio) < silence_threshold)
-    silence_ratio = silent_frames / len(audio)
-    if silence_ratio < 0.1:
-        score += 1
-        reasons.append("No natural pauses detected")
-    pitches, _ = librosa.piptrack(y=audio, sr=SAMPLE_RATE)
-    pitch_values = pitches[pitches > 0]
-    if len(pitch_values) > 0:
-        pitch_smoothness = np.std(pitch_values)
-        if pitch_smoothness < 500:
-            score += 1
-            reasons.append("Pitch too smooth — AI pattern")
-    flatness = np.mean(librosa.feature.spectral_flatness(y=audio))
-    if flatness < 0.01:
-        score += 1
-        reasons.append("Spectral pattern matches AI voice")
-    return score, reasons
+print("Loading model...")
+model = joblib.load("scam_detector_model.pkl")
+scaler = joblib.load("scaler.pkl")
+print("Model loaded successfully!")
 
 @app.route('/', methods=['GET'])
 def home():
@@ -74,59 +52,50 @@ def analyze():
         audio_file = request.files['audio']
         audio_bytes = audio_file.read()
 
-        # Save to temp file and load with librosa
         with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
         audio, sr = librosa.load(tmp_path, sr=SAMPLE_RATE, mono=True)
+        import soundfile as sf2
+        sf2.write("debug_last_recording.wav", audio, SAMPLE_RATE)
         os.unlink(tmp_path)
-
         audio = audio.astype(np.float32)
 
-        # Check if audio has actual sound (not silence)
-        energy = np.sqrt(np.mean(audio**2))
-        if energy < 0.005:
+        print(f"DEBUG: audio length={len(audio)}, energy={np.sqrt(np.mean(audio**2)):.5f}")
+
+        energy = np.sqrt(np.mean(audio**2)) if len(audio) > 0 else 0
+        if energy < 0.003:
             return jsonify({
-                "error": "No voice detected — please speak clearly",
-                "is_scam": False,
+                "confidence": 0,
                 "result": "NO_VOICE",
-                "message": "🎤 No voice detected. Please try again and speak."
-            }), 200
+                "message": "🎤 No voice detected. Please speak clearly.",
+                "is_scam": False
+            })
 
-        features = extract_features(audio)
-        features = features.reshape(1, -1)
+        features = extract_features(audio).reshape(1, -1)
+        features_scaled = scaler.transform(features)
 
-        model = joblib.load("scam_detector_model.pkl")
-        scaler = joblib.load("scaler.pkl")
-        features = scaler.transform(features)
+        prediction = int(model.predict(features_scaled)[0])
+        probability = model.predict_proba(features_scaled)[0]
+        confidence = round(max(probability) * 100, 2)
 
-        prediction = model.predict(features)[0]
-        probability = model.predict_proba(features)[0]
-        confidence = max(probability) * 100
+        print(f"DEBUG: prediction={prediction}, confidence={confidence}")
 
-        ai_score, reasons = advanced_ai_checks(audio)
-
-        if prediction == 1 or ai_score >= 2:
-            is_scam = True
-            message = "⚠️ SCAM DETECTED!"
-        else:
-            is_scam = False
-            message = "✅ Genuine call!"
+        is_scam = (prediction == 1)
 
         return jsonify({
-            "prediction": int(prediction),
-            "confidence": round(confidence, 2),
+            "prediction": prediction,
+            "confidence": confidence,
             "result": "AI_VOICE" if is_scam else "REAL_HUMAN",
-            "message": message,
-            "is_scam": is_scam,
-            "ai_indicators": reasons,
-            "ai_score": ai_score
+            "message": "⚠️ AI VOICE DETECTED! Possible SCAM!" if is_scam else "✅ Real Human Voice! Genuine Call!",
+            "is_scam": is_scam
         })
 
     except Exception as e:
         import traceback
-        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -134,5 +103,4 @@ def health():
 
 if __name__ == "__main__":
     print("🚀 Starting AI Scam Detector API...")
-    print("📡 API running at: http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)
