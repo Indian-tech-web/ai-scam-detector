@@ -1,199 +1,603 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Scam Call Detector</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #0f0f1a;
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background: #1a1a2e;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
-        }
-        .logo { font-size: 60px; margin-bottom: 10px; }
-        h1 { font-size: 24px; margin-bottom: 5px; color: #a78bfa; }
-        p { color: #888; margin-bottom: 30px; font-size: 14px; }
-        .btn {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            border: none;
-            color: white;
-            padding: 18px 40px;
-            border-radius: 50px;
-            font-size: 18px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 15px;
-            transition: all 0.3s;
-        }
-        .btn:hover { transform: scale(1.05); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-stop {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            display: none;
-        }
-        .status {
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            font-size: 16px;
-            display: none;
-        }
-        .status.recording {
-            background: #1e3a2f;
-            border: 1px solid #22c55e;
-            color: #22c55e;
-            display: block;
-        }
-        .status.analyzing {
-            background: #1e2a3a;
-            border: 1px solid #3b82f6;
-            color: #3b82f6;
-            display: block;
-        }
-        .status.real {
-            background: #1e3a2f;
-            border: 1px solid #22c55e;
-            color: #22c55e;
-            display: block;
-        }
-        .status.fake {
-            background: #3a1e1e;
-            border: 1px solid #ef4444;
-            color: #ef4444;
-            display: block;
-        }
-        .confidence {
-            font-size: 13px;
-            margin-top: 8px;
-            color: #888;
-        }
-        .wave {
-            display: none;
-            justify-content: center;
-            align-items: center;
-            gap: 4px;
-            margin: 20px 0;
-        }
-        .wave.active { display: flex; }
-        .wave span {
-            width: 6px;
-            height: 30px;
-            background: #6366f1;
-            border-radius: 3px;
-            animation: wave 0.8s infinite ease-in-out;
-        }
-        .wave span:nth-child(2) { animation-delay: 0.1s; }
-        .wave span:nth-child(3) { animation-delay: 0.2s; }
-        .wave span:nth-child(4) { animation-delay: 0.3s; }
-        .wave span:nth-child(5) { animation-delay: 0.4s; }
-        @keyframes wave {
-            0%, 100% { transform: scaleY(0.5); }
-            50% { transform: scaleY(1.5); }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ScamGuard — AI Call Protection</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #080808;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.12);
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --green: #00e676;
+    --green-dim: rgba(0,230,118,0.1);
+    --green-border: rgba(0,230,118,0.2);
+    --red: #ff3d57;
+    --red-dim: rgba(255,61,87,0.1);
+    --red-border: rgba(255,61,87,0.2);
+    --blue: #2979ff;
+    --blue-dim: rgba(41,121,255,0.12);
+    --yellow: #ffd740;
+    --yellow-dim: rgba(255,215,64,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 390px;
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Status bar */
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .statusbar-right { display: flex; gap: 6px; align-items: center; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 0;
+  }
+  .header-brand { display: flex; align-items: center; gap: 10px; }
+  .brand-icon {
+    width: 34px; height: 34px;
+    background: var(--blue-dim);
+    border: 1px solid rgba(41,121,255,0.25);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-icon svg { width: 18px; height: 18px; }
+  .brand-name { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .brand-sub { font-size: 11px; color: var(--text3); letter-spacing: 0.2px; margin-top: 1px; }
+  .live-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--green-dim);
+    border: 1px solid var(--green-border);
+    border-radius: 20px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--green);
+    letter-spacing: 0.3px;
+  }
+  .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.8s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Main content */
+  .content { flex: 1; padding: 24px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Caller card */
+  .caller-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .caller-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+  .caller-top { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .caller-avatar {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .caller-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+  }
+  .caller-meta { flex: 1; min-width: 0; }
+  .caller-name { font-size: 17px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); }
+  .caller-number { font-size: 13px; color: var(--text2); margin-top: 2px; letter-spacing: 0.3px; }
+  .caller-location { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .call-timer {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    flex-shrink: 0;
+  }
+
+  /* Waveform */
+  .waveform-container {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin-bottom: 16px;
+  }
+  .wbar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--border-bright);
+    transition: height 0.08s ease, background 0.3s;
+  }
+  .wbar.active { background: var(--blue); }
+
+  /* Detection result */
+  .detection {
+    border-radius: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    transition: all 0.4s ease;
+  }
+  .detection.state-human { border-color: var(--green-border); background: var(--green-dim); }
+  .detection.state-ai { border-color: var(--red-border); background: var(--red-dim); }
+  .detection-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .detection-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+  .detection-label svg { width: 12px; height: 12px; }
+  .detection-status { font-size: 11px; color: var(--text3); }
+  .detection-result { font-size: 14px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
+  .detection-result.human { color: var(--green); }
+  .detection-result.ai { color: var(--red); }
+  .conf-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 4px; }
+  .conf-label-text { font-size: 11px; color: var(--text3); }
+  .conf-value { font-size: 11px; font-weight: 600; color: var(--text2); font-variant-numeric: tabular-nums; }
+  .conf-track { height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 2px; background: var(--text3); transition: width 0.5s ease, background 0.3s; }
+  .conf-fill.human { background: var(--green); }
+  .conf-fill.ai { background: var(--red); }
+
+  /* Actions */
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .btn {
+    flex: 1; padding: 13px;
+    border-radius: 12px;
+    border: 1px solid var(--border-bright);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all 0.15s;
+    letter-spacing: -0.2px;
+  }
+  .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn:hover:not(:disabled) { background: #222; border-color: rgba(255,255,255,0.18); }
+  .btn:active:not(:disabled) { transform: scale(0.98); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: #1a5fe8; }
+  .btn.end-call { background: var(--red-dim); border-color: var(--red-border); color: var(--red); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  }
+  .stat-icon { margin-bottom: 8px; }
+  .stat-icon svg { width: 16px; height: 16px; }
+  .stat-val { font-size: 26px; font-weight: 600; letter-spacing: -1px; color: var(--text); line-height: 1; }
+  .stat-val.danger { color: var(--red); }
+  .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 4px; font-weight: 400; }
+
+  /* Coming soon */
+  .coming-soon {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .cs-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--yellow-dim);
+    border: 1px solid rgba(255,215,64,0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .cs-icon svg { width: 18px; height: 18px; }
+  .cs-top { display: flex; align-items: center; gap: 7px; margin-bottom: 2px; }
+  .cs-title { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
+  .cs-badge {
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 6px;
+    background: var(--yellow-dim);
+    border: 1px solid rgba(255,215,64,0.2);
+    color: var(--yellow);
+  }
+  .cs-desc { font-size: 11px; color: var(--text3); line-height: 1.4; }
+
+  /* History */
+  .history-section {}
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; }
+  .section-title { font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
+  .section-count { font-size: 11px; color: var(--text3); }
+  .history-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .history-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .hi-left { display: flex; align-items: center; gap: 10px; }
+  .hi-icon {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hi-icon svg { width: 14px; height: 14px; }
+  .hi-name { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
+  .hi-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .hi-pill {
+    font-size: 11px; font-weight: 500;
+    padding: 4px 9px; border-radius: 8px;
+  }
+  .hi-pill.human { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+  .hi-pill.ai { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+  .empty-state { padding: 24px; text-align: center; font-size: 13px; color: var(--text3); }
+
+  /* Bottom safe area */
+  .safe-area { height: 20px; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">🛡️</div>
-        <h1>AI Scam Detector</h1>
-        <p>Record a voice to detect if it's AI generated</p>
+<div class="phone">
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <div class="statusbar-right">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="1" width="2.5" height="11" rx="1" opacity="0.3"/></svg>
+      <svg width="16" height="12" viewBox="0 0 20 14" fill="currentColor"><path d="M10 3C6.5 3 3.4 4.4 1.2 6.7L0 5.4C2.6 2.6 6.1 1 10 1s7.4 1.6 10 4.4L18.8 6.7C16.6 4.4 13.5 3 10 3z"/><path d="M10 7c-2.2 0-4.2.9-5.7 2.3L3 8C4.9 6.2 7.3 5 10 5s5.1 1.2 7 3l-1.3 1.3C14.2 7.9 12.2 7 10 7z"/><circle cx="10" cy="13" r="2"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="0" width="22" height="12" rx="3.5" stroke="currentColor" stroke-width="1" fill="none" opacity="0.35"/><rect x="23" y="3.5" width="2" height="5" rx="1" opacity="0.35"/><rect x="1.5" y="1.5" width="17" height="9" rx="2" fill="currentColor"/></svg>
+    </div>
+  </div>
 
-        <button class="btn" id="startBtn" onclick="startRecording()">
-            🎤 Start Recording
-        </button>
-        <button class="btn btn-stop" id="stopBtn" onclick="stopRecording()">
-            ⏹️ Stop & Analyze
-        </button>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2979ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">ScamGuard</div>
+        <div class="brand-sub">AI Voice Protection</div>
+      </div>
+    </div>
+    <div class="live-pill">
+      <div class="live-dot"></div>
+      Protected
+    </div>
+  </div>
 
-        <div class="wave" id="wave">
-            <span></span><span></span><span></span><span></span><span></span>
+  <!-- Main content -->
+  <div class="content">
+
+    <!-- Caller card -->
+    <div class="caller-card">
+      <div class="caller-top">
+        <div class="caller-avatar">👤</div>
+        <div class="caller-meta">
+          <div class="caller-name">Unknown Caller</div>
+          <div class="caller-number">+91 98765 XXXXX</div>
+          <div class="caller-location">📍 Location unavailable</div>
         </div>
+        <div class="call-timer" id="timer">00:00</div>
+      </div>
 
-        <div class="status" id="status"></div>
-        <div class="confidence" id="confidence"></div>
+      <!-- Waveform -->
+      <div class="waveform-container" id="waveform"></div>
+
+      <!-- Detection box -->
+      <div class="detection" id="detectionBox">
+        <div class="detection-top">
+          <div class="detection-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            Voice Analysis
+          </div>
+          <div class="detection-status" id="analysisStatus">Ready</div>
+        </div>
+        <div class="detection-result" id="detectionResult">Tap analyze to begin</div>
+        <div class="conf-row">
+          <span class="conf-label-text">Confidence</span>
+          <span class="conf-value" id="confValue">—</span>
+        </div>
+        <div class="conf-track">
+          <div class="conf-fill" id="confFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button class="btn primary" id="recordBtn" onclick="startAnalysis()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+          Analyze call
+        </button>
+        <button class="btn end-call" id="stopBtn" onclick="stopAnalysis()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Stop
+        </button>
+      </div>
     </div>
 
-    <script>
-        const API_URL = 'https://ai-scam-detector-zn0m.onrender.com';
-        let mediaRecorder;
-        let audioChunks = [];
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l1.84-1.84a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <div class="stat-val" id="totalCalls">0</div>
+        <div class="stat-lbl">Calls analyzed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ff3d57" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="stat-val danger" id="scamsBlocked">0</div>
+        <div class="stat-lbl">Scams detected</div>
+      </div>
+    </div>
 
-        async function startRecording() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const options = { mimeType: 'audio/webm' };
-mediaRecorder = new MediaRecorder(stream, options);
-                audioChunks = [];
+    <!-- Coming soon -->
+    <div class="coming-soon">
+      <div class="cs-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ffd740" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </div>
+      <div>
+        <div class="cs-top">
+          <span class="cs-title">Auto call detection</span>
+          <span class="cs-badge">Soon</span>
+        </div>
+        <div class="cs-desc">Detects AI voice automatically on active calls — no action needed</div>
+      </div>
+    </div>
 
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = analyzeAudio;
-                mediaRecorder.start();
+    <!-- History -->
+    <div class="history-section">
+      <div class="section-header">
+        <span class="section-title">Recent calls</span>
+        <span class="section-count" id="historyCount">—</span>
+      </div>
+      <div class="history-card">
+        <div id="historyList">
+          <div class="empty-state">No calls analyzed yet</div>
+        </div>
+      </div>
+    </div>
 
-                document.getElementById('startBtn').style.display = 'none';
-                document.getElementById('stopBtn').style.display = 'block';
-                document.getElementById('wave').classList.add('active');
-                showStatus('recording', '🎤 Recording... Speak now!');
+  </div>
+  <div class="safe-area"></div>
+</div>
 
-            } catch(e) {
-                showStatus('fake', '❌ Microphone access denied!');
-            }
-        }
+<script>
+const API_URL = 'https://ai-scam-detector-zn0m.onrender.com';
+let mediaRecorder, audioChunks = [], timerInterval, seconds = 0;
+let totalCalls = 0, scamsBlocked = 0, history = [];
+let waveInterval, bars = [];
 
-        function stopRecording() {
-            mediaRecorder.stop();
-            document.getElementById('stopBtn').style.display = 'none';
-            document.getElementById('wave').classList.remove('active');
-            showStatus('analyzing', '🔍 Analyzing voice...');
-        }
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.getHours().toString().padStart(2,'0') + ':' +
+    now.getMinutes().toString().padStart(2,'0');
+}
+updateClock();
+setInterval(updateClock, 10000);
 
-        async function analyzeAudio() {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.wav');
+// Build waveform
+const wf = document.getElementById('waveform');
+for(let i = 0; i < 36; i++) {
+  const b = document.createElement('div');
+  b.className = 'wbar';
+  const h = 4 + Math.random() * 20;
+  b.style.height = h + 'px';
+  wf.appendChild(b);
+  bars.push(b);
+}
 
-            try {
-                const response = await fetch(`${API_URL}/analyze`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
+function animateWave(on) {
+  clearInterval(waveInterval);
+  if(!on) {
+    bars.forEach((b,i) => {
+      b.classList.remove('active');
+      b.style.height = (4 + Math.sin(i*0.5)*10 + 8) + 'px';
+    });
+    return;
+  }
+  waveInterval = setInterval(() => {
+    bars.forEach(b => {
+      b.classList.add('active');
+      b.style.height = (4 + Math.random() * 32) + 'px';
+    });
+  }, 90);
+}
 
-                if (result.is_scam) {
-                    showStatus('fake', '⚠️ AI VOICE DETECTED! Possible SCAM!');
-                } else {
-                    showStatus('real', '✅ Real Human Voice! Genuine Call!');
-                }
-                document.getElementById('confidence').textContent =
-                    `Confidence: ${result.confidence}%`;
+function tick() {
+  seconds++;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  document.getElementById('timer').textContent = m + ':' + s;
+}
 
-            } catch(e) {
-                showStatus('fake', '❌ Error connecting to server');
-            }
+async function startAnalysis() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = analyzeAudio;
+    mediaRecorder.start();
+    seconds = 0;
+    timerInterval = setInterval(tick, 1000);
+    animateWave(true);
+    document.getElementById('recordBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    const box = document.getElementById('detectionBox');
+    box.className = 'detection';
+    document.getElementById('detectionResult').className = 'detection-result';
+    document.getElementById('detectionResult').textContent = 'Listening…';
+    document.getElementById('analysisStatus').textContent = 'Recording';
+    document.getElementById('confValue').textContent = '—';
+    document.getElementById('confFill').style.width = '0%';
+    document.getElementById('confFill').className = 'conf-fill';
+  } catch(e) {
+    document.getElementById('detectionResult').textContent = 'Microphone access denied';
+  }
+}
 
-            document.getElementById('startBtn').style.display = 'block';
-        }
+function stopAnalysis() {
+  if(mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  }
+  clearInterval(timerInterval);
+  animateWave(false);
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('analysisStatus').textContent = 'Analyzing…';
+  document.getElementById('detectionResult').textContent = 'Processing audio…';
+}
 
-        function showStatus(type, message) {
-            const el = document.getElementById('status');
-            el.className = `status ${type}`;
-            el.textContent = message;
-        }
-    </script>
+async function analyzeAudio() {
+  const blob = new Blob(audioChunks, {type:'audio/webm'});
+  const form = new FormData();
+  form.append('audio', blob, 'call.webm');
+  try {
+    const res = await fetch(`${API_URL}/analyze`, {method:'POST', body:form});
+    const data = await res.json();
+    totalCalls++;
+    document.getElementById('totalCalls').textContent = totalCalls;
+    const box = document.getElementById('detectionBox');
+    const result = document.getElementById('detectionResult');
+    const fill = document.getElementById('confFill');
+    const conf = Math.round(data.confidence || 0);
+    document.getElementById('confValue').textContent = conf + '%';
+    fill.style.width = conf + '%';
+    if(data.is_scam) {
+      scamsBlocked++;
+      document.getElementById('scamsBlocked').textContent = scamsBlocked;
+      box.className = 'detection state-ai';
+      result.className = 'detection-result ai';
+      result.textContent = 'AI voice detected — likely a scam';
+      fill.className = 'conf-fill ai';
+      document.getElementById('analysisStatus').textContent = 'Scam detected';
+    } else if(data.result === 'NO_VOICE') {
+      box.className = 'detection';
+      result.className = 'detection-result';
+      result.textContent = 'No voice detected — speak clearly';
+      document.getElementById('analysisStatus').textContent = 'Retry';
+    } else {
+      box.className = 'detection state-human';
+      result.className = 'detection-result human';
+      result.textContent = 'Real human voice — call is genuine';
+      fill.className = 'conf-fill human';
+      document.getElementById('analysisStatus').textContent = 'Verified';
+    }
+    const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    history.unshift({time, isAI: data.is_scam, conf});
+    if(history.length > 6) history.pop();
+    renderHistory();
+  } catch(e) {
+    document.getElementById('detectionResult').textContent = 'Connection error — try again';
+    document.getElementById('analysisStatus').textContent = 'Error';
+  }
+  document.getElementById('recordBtn').disabled = false;
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const c = history.length;
+  document.getElementById('historyCount').textContent = c + ' call' + (c !== 1 ? 's' : '');
+  if(!c) { list.innerHTML = '<div class="empty-state">No calls analyzed yet</div>'; return; }
+  list.innerHTML = history.map(item => `
+    <div class="history-item">
+      <div class="hi-left">
+        <div class="hi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${item.isAI ? '#ff3d57' : '#888'}" stroke-width="2" stroke-linecap="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l1.84-1.84a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <div>
+          <div class="hi-name">Unknown caller</div>
+          <div class="hi-meta">${item.time} &middot; ${item.conf}% confidence</div>
+        </div>
+      </div>
+      <span class="hi-pill ${item.isAI ? 'ai' : 'human'}">${item.isAI ? 'AI voice' : 'Human'}</span>
+    </div>
+  `).join('');
+}
+</script>
 </body>
 </html>
