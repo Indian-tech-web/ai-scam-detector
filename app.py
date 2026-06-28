@@ -5,7 +5,6 @@ import librosa
 import joblib
 import tempfile
 
-os.environ["PATH"] += os.pathsep + r"C:\Users\LOQ\Desktop\ffmpeg-8.1.1-essentials_build\bin"
 
 app = Flask(__name__)
 SAMPLE_RATE = 22050
@@ -56,7 +55,18 @@ def analyze():
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
-        audio, sr = librosa.load(tmp_path, sr=SAMPLE_RATE, mono=True)
+        # Convert webm to wav using ffmpeg
+        import subprocess
+        wav_fd, wav_path = tempfile.mkstemp(suffix='.wav')
+        os.close(wav_fd)
+        result = subprocess.run([
+            r"C:\Users\LOQ\Desktop\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe",
+            "-y", "-i", tmp_path, "-ar", "22050", "-ac", "1", wav_path
+        ], capture_output=True)
+        print(f"FFmpeg result: {result.returncode}")
+        print(f"FFmpeg stderr: {result.stderr.decode()[:200]}")
+        audio, sr = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
+        os.unlink(wav_path)
         import soundfile as sf2
         sf2.write("debug_last_recording.wav", audio, SAMPLE_RATE)
         os.unlink(tmp_path)
