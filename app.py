@@ -59,8 +59,12 @@ def analyze():
         import subprocess
         wav_fd, wav_path = tempfile.mkstemp(suffix='.wav')
         os.close(wav_fd)
+        # Works on both Windows and Linux/Render
+        ffmpeg_path = r"C:\Users\LOQ\Desktop\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe"
+        if not os.path.exists(ffmpeg_path):
+            ffmpeg_path = "ffmpeg"  # Linux/Render pe system ffmpeg use karo
         result = subprocess.run([
-            r"C:\Users\LOQ\Desktop\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe",
+            ffmpeg_path,
             "-y", "-i", tmp_path, "-ar", "22050", "-ac", "1", wav_path
         ], capture_output=True)
         print(f"FFmpeg result: {result.returncode}")
