@@ -65,10 +65,14 @@ def analyze():
         ], capture_output=True)
         print(f"FFmpeg result: {result.returncode}")
         print(f"FFmpeg stderr: {result.stderr.decode()[:200]}")
-        audio, sr = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
-        os.unlink(wav_path)
         import soundfile as sf2
-        sf2.write("debug_last_recording.wav", audio, SAMPLE_RATE)
+        audio, sr = sf2.read(wav_path, dtype='float32', always_2d=False)
+        if len(audio.shape) > 1:
+            audio = np.mean(audio, axis=1)
+        import resampy
+        if sr != SAMPLE_RATE:
+            audio = resampy.resample(audio, sr, SAMPLE_RATE)
+        os.unlink(wav_path)
         os.unlink(tmp_path)
         audio = audio.astype(np.float32)
 
