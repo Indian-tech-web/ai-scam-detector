@@ -83,6 +83,9 @@ def analyze():
         os.unlink(wav_path)
         os.unlink(tmp_path)
         audio = audio.astype(np.float32)
+        
+        import soundfile as sf3
+        sf3.write("debug_flutter_recording.wav", audio, SAMPLE_RATE)
 
         print(f"DEBUG: audio length={len(audio)}, energy={np.sqrt(np.mean(audio**2)):.5f}")
 
