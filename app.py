@@ -51,7 +51,11 @@ def analyze():
         audio_file = request.files['audio']
         audio_bytes = audio_file.read()
 
-        with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as tmp:
+        # Detect format from filename
+        filename = audio_file.filename or 'recording.webm'
+        ext = '.m4a' if filename.endswith('.m4a') else '.webm'
+        
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
